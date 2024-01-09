@@ -1,0 +1,51 @@
+
+{{- $mesh_service := printf "%s_%s_svc_1433" (include "miesportal.sqlserverFullName" .) .Release.Namespace -}}
+{{- $correlator := printf "%s-%s-gateway" .Values.mesh .Release.Name  }}
+---
+apiVersion: kuma.io/v1alpha1
+kind: MeshGateway
+mesh: {{ .Values.mesh}}
+metadata:
+  name: {{ .Values.mesh }}-{{ include "tunnel.name" . }}
+  labels:
+    {{- include "miesportal.labels" . | nindent 4 }}
+spec:
+  conf:
+    listeners:
+    - port: 1433
+      protocol: TCP
+  selectors:
+  - match:
+      kuma.io/service: {{ include "tunnel.name" . }}-gateway
+---
+apiVersion: kuma.io/v1alpha1
+kind: MeshGatewayRoute
+mesh: {{ .Values.mesh}}
+metadata:
+  name: {{ .Values.mesh }}-{{ include "tunnel.name" . }}
+  labels:
+    {{- include "miesportal.labels" . | nindent 4 }}
+spec:
+  conf:
+   tcp:
+    rules:
+    - backends:
+      - destination:
+          kuma.io/service: {{ $mesh_service }}
+        weight: 1
+  selectors:
+  - match:
+      kuma.io/service: {{ include "tunnel.name" . }}-gateway
+---
+apiVersion: kuma.io/v1alpha1
+kind: MeshGatewayInstance
+metadata:
+  name: {{ .Values.mesh }}-{{ include "tunnel.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "miesportal.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  serviceType: LoadBalancer
+  tags:
+    kuma.io/service: {{ include "tunnel.name" . }}-gateway
