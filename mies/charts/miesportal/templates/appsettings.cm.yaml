@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "miesportal.appsettingsFullName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "miesportal.labels" . | nindent 4 }}
+data:
+  appsettings.Production.json: |-
+   {{- include "miesportal.appsettings.production.json" . | nindent 4 }}

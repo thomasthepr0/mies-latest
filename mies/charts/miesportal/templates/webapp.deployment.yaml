@@ -1,0 +1,58 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "miesportal.webappFullName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "miesportal.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.webapp.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "miesportal.selectorLabels" . | nindent 6 }}
+      {{- with .Values.webapp.podLabels }}      
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
+  template:
+    metadata:      
+      labels:
+        {{- include "miesportal.selectorLabels" . | nindent 8 }}
+        {{- with .Values.webapp.podLabels }}      
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec: 
+      initContainers:
+        {{- include "miesportal.secretsloadedprobeContainer" . | nindent 8 }}
+      containers:
+        - name: {{ .Values.webapp.id }}          
+          image: "{{ .Values.repository }}/{{ .Values.webapp.id }}:{{ .Values.webapp.image.tag }}"
+          imagePullPolicy: {{ .Values.webapp.image.pullPolicy }}
+          envFrom:
+          - secretRef:
+              name: {{ include "miesportal.mssqlconnectionstringsecretFullName" . }}
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: "Production"
+          volumeMounts:
+          - name: appsettings
+            subPath: "appsettings.Production.json"
+            mountPath: "/app/appsettings.json"
+            readOnly: true
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP          
+          resources:
+            {{- toYaml .Values.webapp.resources | nindent 12 }}
+      volumes:
+      - name: appsettings
+        configMap:
+          name: {{ include "miesportal.appsettingsFullName" . }}
+      - name: secretsloadedprobe
+        configMap:
+          name: {{ include "miesportal.secretsloadedprobeFullName" . }}
+          defaultMode: 0744
+      - name: externalsecrets
+        secret:
+          secretName: {{ include "miesportal.mssqlconnectionstringsecretFullName" . }}

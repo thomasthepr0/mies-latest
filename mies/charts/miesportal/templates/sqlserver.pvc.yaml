@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.sqlserver.pvc.id }}-{{ include "miesportal.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "miesportal.labels" . | nindent 4 }}
+spec:  
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.sqlserver.pvc.storageClassName }}
+  resources:
+    requests:
+      storage: 5Gi

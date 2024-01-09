@@ -1,0 +1,57 @@
+{{/*
+Intit block
+*/}}
+
+{{- $correlator := printf "%s-%s-gateway" .Values.mesh .Release.Name  }}
+---
+apiVersion: kuma.io/v1alpha1
+kind: MeshGateway
+mesh: {{ .Values.mesh }}
+metadata:
+  name: {{ include "miesportal.meshgatewayFullName" . }}
+  labels:
+    {{- include "miesportal.labels" . | nindent 4 }}
+spec:
+  conf:
+    listeners:
+    - port: 80
+      protocol: HTTP
+  selectors:
+  - match:
+      kuma.io/service: {{ $correlator }}
+---
+apiVersion: kuma.io/v1alpha1
+kind: MeshGatewayRoute
+mesh: {{ .Values.mesh }}
+metadata:
+  name: {{ include "miesportal.meshgatewayFullName" . }}
+  labels:
+    {{- include "miesportal.labels" . | nindent 4 }}
+spec:
+  conf:
+   http:
+    rules:
+    - matches:
+      - path:
+          match: PREFIX
+          value: /
+      backends:
+      - destination:
+          kuma.io/service: {{ printf "%s-%s" .Values.webapp.id (include "miesportal.fullname" .) }}_{{ .Release.Namespace }}_svc_80
+        weight: 1
+  selectors:
+  - match:
+      kuma.io/service: {{ $correlator }}
+---
+apiVersion: kuma.io/v1alpha1
+kind: MeshGatewayInstance
+metadata:
+  name: {{ include "miesportal.meshgatewayFullName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "miesportal.labels" . | nindent 4 }}
+spec:
+  replicas: 1  
+  tags:
+    kuma.io/service: {{ $correlator }}
+
